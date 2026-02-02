@@ -14,7 +14,8 @@ export async function POST(req: Request) {
     }
 
     // 2. Attempt to Initialize Stripe
-    const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
+    // ✅ FIXED: Add 'as any' to satisfy the strict TypeScript check
+    const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' as any });
     const headersList = await headers();
     const origin = headersList.get('origin') || 'http://localhost:3000';
 

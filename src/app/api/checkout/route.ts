@@ -7,15 +7,15 @@ export async function POST(req: Request) {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
 
     // 1. SAFETY CHECK: Check if key is missing or fake
-    // If the key is empty, undefined, or still says "placeholder", we go to "Coming Soon" mode.
     if (!stripeKey || stripeKey.includes('placeholder') || stripeKey === 'your_key_here') {
       console.warn("Stripe is not fully configured. Defaulting to 'Coming Soon' mode.");
       return NextResponse.json({ coming_soon: true }, { status: 200 });
     }
 
     // 2. Attempt to Initialize Stripe
-    // ✅ FIXED: Add 'as any' to satisfy the strict TypeScript check
+    // ✅ FIXED: Added 'as any' to satisfy TypeScript strictness
     const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' as any });
+    
     const headersList = await headers();
     const origin = headersList.get('origin') || 'http://localhost:3000';
 
@@ -38,9 +38,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url });
 
   } catch (err: any) {
-    // 4. THE FAIL-SAFE
-    // If Stripe crashes (e.g., invalid key format), don't show an error to the user.
-    // Just show "Coming Soon" so the app feels polished.
     console.error("Stripe Error (Falling back to Coming Soon):", err.message);
     return NextResponse.json({ coming_soon: true }, { status: 200 });
   }

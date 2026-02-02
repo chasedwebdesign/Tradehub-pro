@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server';
 
 // 1. Initialize OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  // ✅ FIXED: Use a dummy key if the real one is missing during build
+  apiKey: process.env.OPENAI_API_KEY || 'sk-placeholder-key-for-build',
 });
 
 export async function POST(req: Request) {

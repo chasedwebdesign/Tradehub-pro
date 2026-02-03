@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// 1. Initialize Supabase LOCALLY with Safety Fallbacks
+// This prevents the build from crashing if Vercel checks for keys before the app runs.
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key-for-build'
+);
 
 // Real-world data sample for Water Treatment Operators (BLS estimates)
 const SEED_DATA = [
@@ -22,7 +29,6 @@ export async function GET() {
     const results = [];
 
     // 1. Ensure the Occupation exists
-    // We use .select() first to get the ID because .upsert() returns the whole object
     let { data: occupation } = await supabase
       .from('occupations')
       .select('id')

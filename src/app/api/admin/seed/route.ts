@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 // 1. Initialize Supabase LOCALLY with Safety Fallbacks
 // This prevents the build from crashing if Vercel checks for keys before the app runs.
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key-for-build'
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://wrhetnezmccltwqmqrhs.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyaGV0bmV6bWNjbHR3cW1xcmhzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTgwNjYyMSwiZXhwIjoyMDg1MzgyNjIxfQ.Tq-SBp8uuuHfRO-RRqNYNZTnDx7-euSmDgaO6bopAXY'
 );
 
 // Real-world data sample for Water Treatment Operators (BLS estimates)

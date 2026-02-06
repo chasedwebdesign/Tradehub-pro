@@ -68,7 +68,7 @@ export default function SalaryMap() {
                 onClick={mapHandler} 
                 defaultFill="#e2e8f0"
                 width="100%" 
-                height="auto" 
+                className="h-auto" 
              />
           </div>
           <div className="text-center text-xs text-slate-400 mt-6 font-medium uppercase tracking-wider">

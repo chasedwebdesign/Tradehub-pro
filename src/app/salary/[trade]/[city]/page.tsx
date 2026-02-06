@@ -1,10 +1,12 @@
+// ✅ FIX: Force this page to load fresh data every time (fixes the 404s)
+export const dynamic = 'force-dynamic';
+
 import { supabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-// 1. IMPORT THE NEW COMPONENT
 import QuizCTA from '@/components/QuizCTA';
 
-// 1. This function tells Next.js which pages to build in advance
+// 1. (Optional now) This helps Next.js know about pages, but 'force-dynamic' overrides it for safety.
 export async function generateStaticParams() {
   const { data: salaryData } = await supabase
     .from('salary_data')
@@ -13,19 +15,18 @@ export async function generateStaticParams() {
       locations (slug)
     `);
 
-  // If no data is found, return an empty array so it doesn't crash
   return salaryData?.map((item: any) => ({
     trade: item.occupations.slug,
     city: item.locations.slug,
   })) || [];
 }
 
-// 2. This is the actual page
+// 2. The Actual Page
 export default async function SalaryPage({ params }: { params: Promise<{ trade: string; city: string }> }) {
   // We must "await" the params in Next.js 15
   const { trade, city } = await params;
 
-  // DIAGNOSTIC: This prints to your VS Code terminal so you can see what is happening
+  // DIAGNOSTIC: This prints to your Vercel logs so you can verify it's working
   console.log(`Checking database for Trade: ${trade}, City: ${city}`);
 
   const { data, error } = await supabase
@@ -35,18 +36,16 @@ export default async function SalaryPage({ params }: { params: Promise<{ trade: 
       occupations!inner (title, slug),
       locations!inner (city, state, slug)
     `)
-    // The "!inner" above is the secret sauce. It forces a strict match.
     .eq('occupations.slug', trade)
     .eq('locations.slug', city)
     .single();
 
-  // If there is an error OR no data, show the 404 page
+  // If error or no data, show 404
   if (error || !data) {
     console.log("Error or No Data Found:", error);
     return notFound();
   }
 
-  // Helper variables to make the HTML easier to read
   const occupation = data.occupations as any;
   const location = data.locations as any;
 
@@ -80,12 +79,10 @@ export default async function SalaryPage({ params }: { params: Promise<{ trade: 
             </div>
           </div>
 
-          {/* --- NEW SMART CTA STARTS HERE --- */}
-          {/* This replaces the old static "Want to earn this?" box */}
+          {/* CTA Section */}
           <div className="text-left">
             <QuizCTA trade={trade} city={city} />
           </div>
-          {/* --- NEW SMART CTA ENDS HERE --- */}
 
         </div>
       </main>

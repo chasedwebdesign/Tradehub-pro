@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 // 1. Initialize Supabase LOCALLY with Safety Fallbacks
-// This prevents the build from crashing if Vercel checks for keys before the app runs.
+// Using the Service Role Key allows bypassing RLS to write data.
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://wrhetnezmccltwqmqrhs.supabase.co',
   process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyaGV0bmV6bWNjbHR3cW1xcmhzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTgwNjYyMSwiZXhwIjoyMDg1MzgyNjIxfQ.Tq-SBp8uuuHfRO-RRqNYNZTnDx7-euSmDgaO6bopAXY'
 );
 
-// Real-world data sample for Water Treatment Operators (BLS estimates)
+// Real-world data sample for Water Treatment Operators
 const SEED_DATA = [
   { city: "New York", state: "NY", slug: "new-york-ny", salary: 78000 },
   { city: "Los Angeles", state: "CA", slug: "los-angeles-ca", salary: 84500 },
@@ -22,68 +22,70 @@ const SEED_DATA = [
   { city: "San Jose", state: "CA", slug: "san-jose-ca", salary: 92000 },
   { city: "Seattle", state: "WA", slug: "seattle-wa", salary: 76000 },
   { city: "Denver", state: "CO", slug: "denver-co", salary: 68500 },
+  { city: "Austin", state: "TX", slug: "austin-tx", salary: 62000 }, // Added Austin for good measure
 ];
 
 export async function GET() {
   try {
     const results = [];
 
-    // 1. Ensure the Occupation exists
-    let { data: occupation } = await supabase
+    // 1. Ensure the Occupation exists (Upsert handles duplicate checks)
+    const { data: occupation, error: occError } = await supabase
       .from('occupations')
+      .upsert(
+        { title: 'Water Treatment Operator', slug: 'water-treatment' },
+        { onConflict: 'slug' }
+      )
       .select('id')
-      .eq('slug', 'water-treatment')
       .single();
 
-    if (!occupation) {
-      const { data: newOcc } = await supabase
-        .from('occupations')
-        .insert({ title: 'Water Treatment Operator', slug: 'water-treatment' })
-        .select()
-        .single();
-      occupation = newOcc;
-    }
+    if (occError || !occupation) throw new Error('Failed to create/find occupation');
 
     // 2. Loop through every city and insert data
     for (const item of SEED_DATA) {
       
-      // A. Insert/Get Location
-      let { data: location } = await supabase
+      // A. Upsert Location (The Fix: Prevents "Duplicate Key" errors)
+      // If the slug 'new-york-ny' exists, it updates it. If not, it creates it.
+      const { data: location, error: locError } = await supabase
         .from('locations')
+        .upsert(
+          { 
+            city: item.city, 
+            state: item.state, 
+            slug: item.slug 
+          },
+          { onConflict: 'slug' } // <--- This matches your new DB constraint
+        )
         .select('id')
-        .eq('slug', item.slug)
         .single();
 
-      if (!location) {
-        const { data: newLoc } = await supabase
-          .from('locations')
-          .insert({ city: item.city, state: item.state, slug: item.slug })
-          .select()
-          .single();
-        location = newLoc;
+      if (locError) {
+        console.error(`Error upserting location ${item.city}:`, locError);
+        continue;
       }
 
-      // B. Insert Salary Data
+      // B. Upsert Salary Data
+      // Ensures we don't duplicate salary entries for the same city+trade
       if (occupation && location) {
-        const { error } = await supabase
+        const { error: salaryError } = await supabase
           .from('salary_data')
           .upsert({
             occupation_id: occupation.id,
             location_id: location.id,
             annual_salary: item.salary
-          }, { onConflict: 'occupation_id, location_id' }); // Prevent duplicates
+          }, { onConflict: 'occupation_id, location_id' }); 
 
-        if (!error) {
-          results.push(`Inserted: ${item.city}`);
+        if (!salaryError) {
+          results.push(`Processed: ${item.city}`);
         } else {
-          console.error(`Error for ${item.city}:`, error);
+          console.error(`Error inserting salary for ${item.city}:`, salaryError);
         }
       }
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: `Database seeded with ${results.length} cities!`,
+      message: `Database seeded successfully! Processed ${results.length} cities.`,
       cities: results 
     });
 
